@@ -1,0 +1,1 @@
+Folder location for Notification client AWS IOT certificates.
