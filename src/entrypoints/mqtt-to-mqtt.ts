@@ -1,4 +1,4 @@
-import { mqtt, iot, mqtt5 } from 'aws-iot-device-sdk-v2';
+import { mqtt, iot, mqtt5, auth } from 'aws-iot-device-sdk-v2';
 import { Env } from '../processed-env';
 import { ICrtError } from 'aws-crt';
 import { AwsIotMqtt5ClientConfigBuilder } from 'aws-crt/dist/native/aws_iot_mqtt5';
@@ -53,14 +53,14 @@ const connectExternalMQTTNew = async () => {
 
 const connectCMWebsocket = async () => {
     return new Promise<mqtt.MqttClientConnection>((resolve, reject) => {
-        const config = iot.AwsIotMqttConnectionConfigBuilder.new_builder_for_websocket()
+        const config = iot.AwsIotMqttConnectionConfigBuilder.new_with_websockets({
+            credentials_provider: auth.AwsCredentialsProvider.newDefault(),
+            region: Env.AWS_REGION
+        })
             .with_clean_session(true)
             .with_client_id(`pub_sub_sample(${new Date()})`)
             .with_endpoint(Env.AWS_IOT_ENDPOINT)
-            .with_credentials(Env.AWS_REGION, Env.AWS_ACCESS_KEY_ID, Env.AWS_SECRET_ACCESS_KEY)
-            .with_keep_alive_seconds(30)
-            .build();
-
+            .with_keep_alive_seconds(30).build();
         console.log('Connecting websocket...');
         const client = new mqtt.MqttClient();
 
@@ -89,11 +89,10 @@ const connect = async () => {
     try {
         modernDevice = await connectExternalMQTTNew();
         const connection = await connectCMWebsocket();
-        const topics = Env.TOPIC.split(',');
-        for (const topic of topics) {
-            console.log(`Subscribing to ${topic}`);
-            connection.subscribe(topic, mqtt.QoS.AtLeastOnce, onMessage);
-        }
+        const topic = Env.TOPIC;
+        console.log(`Subscribing to ${topic}`);
+        connection.subscribe(topic, mqtt.QoS.AtLeastOnce, onMessage);
+
     } catch (error) {
         console.log(error);
     }
