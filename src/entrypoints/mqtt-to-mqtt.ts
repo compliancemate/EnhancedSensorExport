@@ -11,6 +11,8 @@ import { AsTempAndRhAggregate } from '../models/asTempAndRhAggregate.model';
 import { AsBacklogTempAndRh } from '../models/asBacklogTempAndRh.model';
 import { AsBacklogTempAndRhAggregate } from '../models/asBacklogTempAndRhAggregate.model';
 import { ExportPackage, LocationAspect, MeasureAspect } from '../models/export-package.model';
+import { v4 as uuidv4 } from 'uuid';
+
 
 let modernDevice: mqtt5.Mqtt5Client | undefined
 
@@ -20,7 +22,9 @@ const connectExternalMQTTNew = async () => {
             Env.NOTIFICATION_HOST_URL,
             Env.NOTIFICATION_CERT_PATH,
             Env.NOTIFICATION_KEY_PATH
-        ).build();
+        )
+            .withConnectProperties({ keepAliveIntervalSeconds: 120, clientId: uuidv4() })
+            .build();
         console.log(JSON.stringify(config, null, 2))
 
         const client: mqtt5.Mqtt5Client = new mqtt5.Mqtt5Client(config);
