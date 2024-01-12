@@ -14,46 +14,47 @@ import { ExportPackage, LocationAspect, MeasureAspect } from '../models/export-p
 import { v4 as uuidv4 } from 'uuid';
 
 
-let modernDevice: mqtt5.Mqtt5Client | undefined
+let modernDevice: mqtt5.Mqtt5Client | undefined;
 
 const connectExternalMQTTNew = async () => {
+    const clientId = uuidv4();
     return new Promise<mqtt5.Mqtt5Client>((resolve, reject) => {
         const config = AwsIotMqtt5ClientConfigBuilder.newDirectMqttBuilderWithMtlsFromPath(
             Env.NOTIFICATION_HOST_URL,
             Env.NOTIFICATION_CERT_PATH,
             Env.NOTIFICATION_KEY_PATH
         )
-            .withConnectProperties({ keepAliveIntervalSeconds: 120, clientId: uuidv4() })
+            .withConnectProperties({ keepAliveIntervalSeconds: 120, clientId })
             .build();
-        console.log(JSON.stringify(config, null, 2))
+        console.log(JSON.stringify(config, null, 2));
 
         const client: mqtt5.Mqtt5Client = new mqtt5.Mqtt5Client(config);
 
         client.on('attemptingConnect', (eventData: AttemptingConnectEvent) => {
-            console.log(eventData)
+            console.log(eventData);
         });
         client.on('connectionSuccess', (eventData: ConnectionSuccessEvent) => {
-            console.log(eventData)
+            console.log(eventData);
         });
         client.on('connectionFailure', (eventData) => {
-            console.log(eventData)
-        })
-        client.on("messageReceived", (eventData: MessageReceivedEvent): void => {
-            console.log("Message Received event: " + JSON.stringify(eventData.message));
+            console.log(eventData);
+        });
+        client.on('messageReceived', (eventData: MessageReceivedEvent): void => {
+            console.log('Message Received event: ' + JSON.stringify(eventData.message));
         });
         client.on('error', (eventData: ICrtError) => {
-            console.error(eventData)
+            console.error(eventData);
         });
         client.on('disconnection', (eventData: DisconnectionEvent) => {
-            console.error(eventData)
+            console.error(eventData);
         });
         client.on('stopped', (eventData: StoppedEvent) => {
-            console.error(eventData)
+            console.error(eventData);
         });
         client.start();
         resolve(client);
-    })
-}
+    });
+};
 
 const connectCMWebsocket = async () => {
     return new Promise<mqtt.MqttClientConnection>((resolve, reject) => {
@@ -106,7 +107,7 @@ const onMessage: mqtt.OnMessageCallback = (topic: string, payload) => {
     try {
         const jsonString = Buffer.from(payload).toString();
         const totalObject: BasePayload = JSON.parse(jsonString);
-        const locationObject: LocationAspect = (({ device_id, ...o }) => o)(totalObject.redis)
+        const locationObject: LocationAspect = (({ device_id, ...o }) => o)(totalObject.redis);
         const measurements: any[] = [];
         switch (totalObject.method) {
             case Method.asTempAndRh: {
@@ -123,11 +124,11 @@ const onMessage: mqtt.OnMessageCallback = (topic: string, payload) => {
             case Method.asTempAndRhAggregate: {
                 const asTempAndRhAggregate = <AsTempAndRhAggregate>totalObject;
                 const parsedTimestamp = asTempAndRhAggregate.params.parsedTimestamp;
-                const temps = asTempAndRhAggregate.params.temperature.reverse()
+                const temps = asTempAndRhAggregate.params.temperature.reverse();
                 for (let i = 0; i < temps.length; i++) {
                     const measure: MeasureAspect = {
                         timeStamp: moment(parsedTimestamp)
-                            .subtract((i) * 5, "minutes").toDate(),
+                            .subtract((i) * 5, 'minutes').toDate(),
                         sensorName: asTempAndRhAggregate.devId,
                         temperature: asTempAndRhAggregate.params.temperature[i],
                         batteryCapacity: asTempAndRhAggregate.params.batteryCapacity
@@ -143,7 +144,7 @@ const onMessage: mqtt.OnMessageCallback = (topic: string, payload) => {
                     timeStamp: asBacklogTempAndRh.params.parsedTimestamp,
                     sensorName: asBacklogTempAndRh.devId,
                     temperature: asBacklogTempAndRh.params.temperature
-                }
+                };
                 measurements.push(measure);
                 break;
             }
@@ -153,10 +154,10 @@ const onMessage: mqtt.OnMessageCallback = (topic: string, payload) => {
                 for (let i = 0; i < asBacklogTempAndRhAggregate.params.temperature.length; i++) {
                     const measure: MeasureAspect = {
                         timeStamp: moment(asBacklogTempAndRhAggregate.params.parsedTimestamp[i])
-                            .subtract((i + 1) * 5, "minutes").toDate(),
+                            .subtract((i + 1) * 5, 'minutes').toDate(),
                         sensorName: asBacklogTempAndRhAggregate.devId,
                         temperature: asBacklogTempAndRhAggregate.params.temperature[i]
-                    }
+                    };
                     measurements.push(measure);
                 }
                 break;
@@ -168,7 +169,7 @@ const onMessage: mqtt.OnMessageCallback = (topic: string, payload) => {
         if (measurements?.length) {
             for (const measure of measurements) {
                 try {
-                    const fullPayload: ExportPackage = Object.assign({}, locationObject, measure)
+                    const fullPayload: ExportPackage = Object.assign({}, locationObject, measure);
                     if (Env.CONVERT_TO_FARENHEIT) {
                         fullPayload.temperature = convertCelsiusToFarenheit(fullPayload.temperature);
                     }
@@ -178,8 +179,8 @@ const onMessage: mqtt.OnMessageCallback = (topic: string, payload) => {
                         qos: mqtt5.QoS.AtMostOnce,
                         payload: Buffer.from(JSON.stringify(fullPayload)),
                         payloadFormat: mqtt5.PayloadFormatIndicator.Bytes
-                    }
-                    modernDevice?.publish(packet)
+                    };
+                    modernDevice?.publish(packet);
                 } catch (error) {
                     console.error(error);
                 }

@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --fix --ext .ts",
     "test": "mocha -r ts-node/register tests/**/*.spec.ts",
     "test:coverage": "nyc npm run test",
     "build:init": "rm -rf ../deployment/* && mkdir -p ../deployment/",
